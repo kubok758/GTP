@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Угадай Цену | Guess the Price</title>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --surface-color: #1c1c1e;
+            --surface-hover: #2c2c2e;
+            --text-primary: #f5f5f7;
+            --text-secondary: #86868b;
+            --accent-color: #0a84ff;
+            --success-color: #30d158;
+            --danger-color: #ff453a;
+            --border-radius: 20px;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Header & Stats */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stats {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .level-badge {
+            background: linear-gradient(135deg, #0a84ff, #5e5ce6);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        /* Main Container */
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem;
+            max-width: 600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Game Card */
+        .card {
+            background-color: var(--surface-color);
+            border-radius: var(--border-radius);
+            width: 100%;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.5s ease;
+        }
+
+        .card.hidden {
+            transform: translateY(30px) scale(0.95);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .image-container {
+            width: 100%;
+            height: 300px;
+            background-color: var(--surface-hover);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .card:hover .image-container img {
+            transform: scale(1.05);
+        }
+
+        .card-content {
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-desc {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Controls */
+        .input-group {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .currency-symbol {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            background-color: var(--surface-hover);
+            border: 2px solid transparent;
+            border-radius: 14px;
+            padding: 1rem 1rem 1rem 2.5rem;
+            font-size: 1.5rem;
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            font-weight: 600;
+            outline: none;
+            transition: border-color 0.2s, background-color 0.2s;
+            text-align: left;
+            -moz-appearance: textfield;
+        }
+
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type="number"]:focus {
+            border-color: var(--accent-color);
+            background-color: #333336;
+        }
+
+        .formatted-preview {
+            display: block;
+            text-align: left;
+            font-size: 0.85rem;
+            color: var(--accent-color);
+            min-height: 20px;
+            margin-bottom: 0.5rem;
+            padding-left: 10px;
+        }
+
+        button {
+            width: 100%;
+            background-color: var(--text-primary);
+            color: var(--bg-color);
+            border: none;
+            border-radius: 14px;
+            padding: 1rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.2s;
+            font-family: var(--font-family);
+        }
+
+        button:hover {
+            background-color: #e5e5ea;
+            transform: scale(1.02);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        button.btn-next {
+            background-color: var(--accent-color);
+            color: white;
+            margin-top: 1rem;
+        }
+
+        button.btn-next:hover {
+            background-color: #0071e3;
+        }
+
+        /* Results Screen */
+        .result-screen {
+            display: none;
+            padding: 1.5rem;
+            text-align: center;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .result-screen.active {
+            display: block;
+        }
+
+        .controls.hidden {
+            display: none;
+        }
+
+        .real-price {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--success-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .error-rate {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        .points-earned {
+            display: inline-block;
+            background: rgba(48, 209, 88, 0.15);
+            color: var(--success-color);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        /* Leaderboard Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal {
+            background: var(--surface-color);
+            border-radius: var(--border-radius);
+            width: 90%;
+            max-width: 400px;
+            padding: 2rem;
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .record-list {
+            list-style: none;
+            margin-bottom: 1.5rem;
+        }
+
+        .record-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.8rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .record-item:last-child { border-bottom: none; }
+
+        .btn-close {
+            background: var(--surface-hover);
+            color: white;
+        }
+
+        .btn-leaderboard {
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            padding: 0.5rem;
+            width: auto;
+            margin-top: 1rem;
+            text-decoration: underline;
+        }
+
+        /* Confetti */
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            z-index: 9999;
+            pointer-events: none;
+            animation: fall linear forwards;
+        }
+
+        @keyframes fall {
+            0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            header { padding: 1rem; flex-direction: column; gap: 1rem; }
+            .stats { width: 100%; justify-content: space-between; }
+            .image-container { height: 220px; }
+            .real-price { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="level-badge" id="ui-level">Новичок</div>
+        <div class="stats">
+            <div class="stat-item">
+                <span class="stat-label">Очки</span>
+                <span class="stat-value" id="ui-score">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Серия</span>
+                <span class="stat-value" id="ui-streak">0 🔥</span>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="card" id="game-card">
+            <div class="image-container">
+                <img id="item-image" src="" alt="Object">
+            </div>
+            <div class="card-content">
+                <h2 class="card-title" id="item-name">Загрузка...</h2>
+                <p class="card-desc" id="item-desc">Подождите немного</p>
+
+                <div class="controls" id="controls">
+                    <span class="formatted-preview" id="price-preview"></span>
+                    <div class="input-group">
+                        <span class="currency-symbol">$</span>
+                        <input type="number" id="price-input" placeholder="Введите цену" autocomplete="off">
+                    </div>
+                    <button id="btn-guess">Угадать</button>
+                </div>
+
+                <div class="result-screen" id="result-screen">
+                    <div class="stat-label">Реальная цена</div>
+                    <div class="real-price" id="res-price">$0</div>
+                    <div class="error-rate" id="res-error">Ошибка: 0%</div>
+                    <div class="points-earned" id="res-points">+0 очков</div>
+                    <button class="btn-next" id="btn-next">Следующий предмет</button>
+                </div>
+            </div>
+        </div>
+        <button class="btn-leaderboard" id="btn-show-lb">Таблица рекордов</button>
+    </main>
+
+    <div class="modal-overlay" id="lb-modal">
+        <div class="modal">
+            <h2 class="modal-title">Топ Рекордов 🏆</h2>
+            <ul class="record-list" id="lb-list">
+                </ul>
+            <button class="btn-close" id="btn-close-lb">Закрыть</button>
+        </div>
+    </div>
+
+    <script>
+        // --- База данных (100 объектов) ---
+        // Изображения генерируются через надежный плейсхолдер с категорией для стабильной работы
+        const dbRaw = [
+            // Автомобили
+            ["Tesla Model S Plaid", "Электромобиль с разгоном до 100 км/ч за 2 секунды", 108000, "car,tesla"],
+            ["Porsche 911 GT3", "Легендарный немецкий спорткар для трека", 185000, "porsche,car"],
+            ["Toyota Camry 2024", "Популярный надежный городской седан", 28000, "toyota,car"],
+            ["Lada Niva Legend", "Классический российский внедорожник", 9500, "suv,car"],
+            ["Rolls-Royce Phantom", "Воплощение автомобильной роскоши и комфорта", 475000, "luxury,car"],
+            ["Ford Mustang Mach 1", "Американский маслкар с двигателем V8", 56000, "mustang,car"],
+            ["Lamborghini Aventador", "Итальянский суперкар с агрессивным дизайном", 500000, "lamborghini"],
+            ["BMW M5 CS", "Мощный спортивный бизнес-седан", 142000, "bmw,car"],
+            ["Mercedes-Benz G-Class", "Премиальный внедорожник, известный как «Гелик»", 140000, "gclass,suv"],
+            ["Chevrolet Corvette Z06", "Американский суперкар со среднемоторной компоновкой", 112000, "corvette,car"],
+            ["Honda Civic Type R", "Один из самых быстрых переднеприводных хэтчбеков", 44000, "honda,car"],
+            ["Audi RS6 Avant", "Безумно быстрый семейный универсал", 125000, "audi,car"],
+            ["Range Rover Vogue", "Британский премиальный внедорожник", 107000, "rangerover,suv"],
+            ["Aston Martin DB11", "Автомобиль агента 007, стиль и мощь", 217000, "astonmartin"],
+            ["McLaren 720S", "Технологичный британский суперкар", 310000, "mclaren,car"],
+            ["Ferrari F8 Tributo", "Итальянская страсть с двигателем V8", 280000, "ferrari,car"],
+            ["Bentley Continental GT", "Роскошный автомобиль класса Gran Turismo", 235000, "bentley,car"],
+            ["Bugatti Chiron", "Один из самых быстрых и дорогих гиперкаров в мире", 3000000, "bugatti,car"],
+            ["Pagani Huayra", "Итальянский гиперкар, произведение искусства", 2600000, "pagani,car"],
+            ["Koenigsegg Jesko", "Шведский мегакар с невероятными характеристиками", 3000000, "koenigsegg"],
+
+            // Техника
+            ["Apple iPhone 15 Pro Max", "Флагманский смартфон в титановом корпусе (256 ГБ)", 1199, "iphone"],
+            ["MacBook Pro 16 M3 Max", "Мощный ноутбук для профессионалов", 3499, "macbook"],
+            ["PlayStation 5", "Игровая консоль от Sony с дисководом", 499, "playstation5"],
+            ["NVIDIA GeForce RTX 4090", "Топовая видеокарта для игр в 4K", 1599, "rtx,gpu"],
+            ["Samsung Galaxy S24 Ultra", "Флагман на Android со стилусом S-Pen", 1299, "samsung,smartphone"],
+            ["Apple Vision Pro", "Гарнитура смешанной реальности от Apple", 3499, "vr,apple"],
+            ["DJI Mavic 3 Pro", "Профессиональный дрон с тремя камерами", 2199, "drone,dji"],
+            ["Sony A7 IV", "Популярная полнокадровая беззеркальная камера (Body)", 2498, "camera,sony"],
+            ["LG OLED C3 65\"", "Премиальный 4K телевизор с идеальным черным цветом", 1699, "tv,oled"],
+            ["Steam Deck OLED", "Портативный игровой ПК от Valve (512 ГБ)", 549, "steamdeck,console"],
+            ["Meta Quest 3", "Популярная автономная VR-гарнитура (128 ГБ)", 499, "vr,quest"],
+            ["Apple Watch Ultra 2", "Защищенные умные часы для экстремального спорта", 799, "applewatch"],
+            ["AirPods Pro 2", "Беспроводные наушники с активным шумоподавлением", 249, "airpods"],
+            ["Xbox Series X", "Флагманская игровая консоль от Microsoft", 499, "xbox"],
+            ["Nintendo Switch OLED", "Популярная гибридная консоль", 349, "nintendo"],
+            ["iPad Pro 12.9 M2", "Самый мощный планшет от Apple", 1099, "ipad"],
+            ["GoPro HERO 12 Black", "Лучшая экшен-камера на рынке", 399, "gopro"],
+            ["Kindle Paperwhite", "Электронная книга с подсветкой", 139, "kindle,ereader"],
+            ["Mac Pro (Базовая конфигурация)", "Десктопный компьютер Apple для студий", 6999, "macpro"],
+            ["Apple Pro Display XDR", "Профессиональный 6K монитор (без подставки)", 4999, "monitor,apple"],
+
+            // Недвижимость (Примерные средние цены)
+            ["Пентхаус в Нью-Йорке", "Элитная квартира с видом на Центральный парк", 15000000, "penthouse,ny"],
+            ["Вилла в Малибу", "Дом на берегу океана в Калифорнии", 8500000, "villa,malibu"],
+            ["Квартира-студия в Париже", "Маленькая уютная квартира с видом на Эйфелеву башню", 600000, "apartment,paris"],
+            ["Шале в Швейцарских Альпах", "Уютный деревянный дом на горнолыжном курорте", 3200000, "chalet,alps"],
+            ["Таунхаус в Лондоне", "Классический кирпичный дом в престижном районе", 4500000, "townhouse,london"],
+            ["Микро-квартира в Токио", "Жилье площадью 15 кв.м в центре мегаполиса", 250000, "apartment,tokyo"],
+            ["Особняк в Лос-Анджелесе", "Дом в Беверли-Хиллз с бассейном и кинотеатром", 12000000, "mansion,la"],
+            ["Вилла в Дубае", "Роскошный дом на искусственном острове Палм-Джумейра", 5500000, "villa,dubai"],
+            ["Кондоминиум в Майами", "Апартаменты на первой линии с видом на океан", 2100000, "condo,miami"],
+            ["Лесная хижина", "Уединенный деревянный домик в лесах Канады", 180000, "cabin,forest"],
+            ["Частный остров", "Небольшой тропический остров в Карибском море", 4000000, "island,tropical"],
+            ["Замок в Шотландии", "Историческое здание с большой прилегающей территорией", 6500000, "castle,scotland"],
+            ["Вилла на озере Комо", "Элитная недвижимость в Италии", 9000000, "villa,italy"],
+            ["Апартаменты в Монако", "Квартира в самом дорогом княжестве мира", 7000000, "monaco,apartment"],
+            ["Пентхаус в Сингапуре", "Современные апартаменты в технологичном мегаполисе", 8500000, "penthouse,singapore"],
+            ["Дом у гавани в Сиднее", "Недвижимость с видом на Сиднейскую оперу", 5000000, "house,sydney"],
+            ["Поместье на Гавайях", "Огромная территория с домом у Тихого океана", 14000000, "estate,hawaii"],
+            ["Бунгало на воде (Мальдивы)", "Популярный формат премиального отдыха (стоимость постройки)", 850000, "bungalow,maldives"],
+            ["Подземный бункер", "Роскошный бункер для выживания класса люкс", 3000000, "bunker,luxury"],
+            ["Загородный дом в Подмосковье", "Коттедж премиум-класса на Новорижском шоссе", 1500000, "cottage,house"],
+
+            // Часы, Ювелирные изделия и Мода
+            ["Rolex Submariner", "Культовые швейцарские дайверские часы (сталь)", 10500, "rolex,watch"],
+            ["Patek Philippe Nautilus 5711", "Одна из самых желанных моделей часов в мире", 120000, "patek,watch"],
+            ["Audemars Piguet Royal Oak", "Роскошные спортивные часы", 45000, "watch,luxury"],
+            ["Сумка Hermès Birkin", "Кожаная сумка, символ статуса и эксклюзивности", 25000, "birkin,bag"],
+            ["Сумка Chanel Classic Flap", "Классическая женская сумка", 10200, "chanel,bag"],
+            ["Браслет Cartier Love", "Знаменитый золотой браслет (с бриллиантами)", 7350, "cartier,bracelet"],
+            ["Кроссовки Nike Air Mag", "Легендарные кроссовки из фильма 'Назад в будущее'", 45000, "sneakers,nike"],
+            ["Кроссовки Yeezy Boost 350", "Популярная обувь от Канье Уэста", 230, "yeezy,sneakers"],
+            ["Сундук Louis Vuitton", "Классический багажный сундук с монограммой", 12500, "louisvuitton"],
+            ["Часы Omega Speedmaster", "Часы, побывавшие на Луне", 7000, "omega,watch"],
+            ["Часы Richard Mille RM 011", "Ультрасовременные часы с уникальным дизайном", 250000, "richardmille"],
+            ["Рюкзак Prada", "Знаменитый нейлоновый рюкзак", 2100, "prada,backpack"],
+            ["Кольцо Tiffany Setting", "Помолвочное кольцо с бриллиантом (1 карат)", 14000, "tiffany,ring"],
+            ["Лоферы Gucci", "Кожаные туфли с металлической пряжкой", 920, "gucci,shoes"],
+            ["Тренч Burberry", "Классический британский плащ", 2500, "burberry,coat"],
+            ["Очки Ray-Ban Aviator", "Самая известная модель солнцезащитных очков", 160, "rayban,sunglasses"],
+            ["Сумка Dior Saddle", "Узнаваемая сумка в форме седла", 4200, "dior,bag"],
+            ["Кирпич Supreme", "Обычный кирпич с логотипом бренда", 150, "supreme,brick"],
+            ["Кроссовки Balenciaga Triple S", "Массивные дизайнерские кроссовки", 1100, "balenciaga"],
+            ["Туфли Christian Louboutin", "Классические лодочки с красной подошвой", 795, "louboutin,shoes"],
+
+            // Разное (Транспорт, Искусство, Предметы обихода)
+            ["Яхта Sunseeker Manhattan", "20-метровая моторная яхта", 2500000, "yacht,luxury"],
+            ["Частный самолет Gulfstream G650", "Ультрадальний бизнес-джет", 65000000, "privatejet"],
+            ["Самолет Cessna 172", "Самый массовый легкий самолет в истории", 400000, "cessna,plane"],
+            ["Рояль Steinway Model D", "Концертный рояль премиум-класса", 190000, "piano,steinway"],
+            ["Скрипка Страдивари", "Исторический музыкальный инструмент", 15000000, "violin,antique"],
+            ["Карточка Charizard (1st Edition)", "Редкая коллекционная карточка Pokemon (PSA 10)", 300000, "pokemon,card"],
+            ["Комикс Action Comics #1", "Первое появление Супермена (оценка)", 3200000, "comic,superman"],
+            ["Кофе Kopi Luwak (1 кг)", "Один из самых дорогих сортов кофе в мире", 1300, "coffee,beans"],
+            ["Шафран (1 кг)", "Самая дорогая в мире специя", 2500, "saffron,spice"],
+            ["Слиток золота (1 кг)", "Стандартный золотой слиток (цена зависит от рынка, средняя)", 65000, "gold,bar"],
+            ["Билет в космос (Virgin Galactic)", "Суборбитальный туристический полет", 450000, "space,ticket"],
+            ["Болид Формулы-1 (б/у)", "Списанный гоночный автомобиль без двигателя", 1500000, "f1,car"],
+            ["Робот-собака Boston Dynamics Spot", "Технологичный четырехногий робот", 75000, "robot,bostondynamics"],
+            ["Кресло Eames Lounge Chair", "Культовое дизайнерское кресло", 7500, "eames,chair"],
+            ["Камера Leica M11", "Премиальная дальномерная камера", 8995, "leica,camera"],
+            ["Моноколесо Begode Master", "Мощный электротранспорт для экстремалов", 3200, "euc,wheel"],
+            ["Голубой тунец (целиком)", "Редкая рыба для премиальных суши (рекордная средняя цена)", 150000, "tuna,fish"],
+            ["Игровая мышь Finalmouse", "Лимитированная ультралегкая мышь", 190, "mouse,gaming"],
+            ["Шлем пилота F-35", "Высокотехнологичный шлем с AR-интерфейсом", 400000, "helmet,f35"],
+            ["Биткоин (1 BTC)", "Самая популярная криптовалюта (условная средняя цена 2024)", 60000, "bitcoin,crypto"]
+        ];
+
+        // Трансформируем массивы в объекты для удобства
+        const items = dbRaw.map((item, index) => ({
+            id: index,
+            name: item[0],
+            desc: item[1],
+            price: item[2],
+            keyword: item[3]
+        }));
+
+        // --- Состояние игры ---
+        let currentItem = null;
+        let score = parseInt(localStorage.getItem('guessPrice_score')) || 0;
+        let streak = parseInt(localStorage.getItem('guessPrice_streak')) || 0;
+        let playedItems = JSON.parse(localStorage.getItem('guessPrice_played')) || [];
+        
+        // --- Уровни ---
+        const levels = [
+            { name: "Новичок", min: 0 },
+            { name: "Любитель", min: 5000 },
+            { name: "Эксперт", min: 15000 },
+            { name: "Миллионер", min: 50000 },
+            { name: "Ценовой Гуру", min: 150000 }
+        ];
+
+        // --- DOM Элементы ---
+        const elScore = document.getElementById('ui-score');
+        const elStreak = document.getElementById('ui-streak');
+        const elLevel = document.getElementById('ui-level');
+        const elCard = document.getElementById('game-card');
+        const elImg = document.getElementById('item-image');
+        const elName = document.getElementById('item-name');
+        const elDesc = document.getElementById('item-desc');
+        const elInput = document.getElementById('price-input');
+        const elPreview = document.getElementById('price-preview');
+        const elBtnGuess = document.getElementById('btn-guess');
+        const elControls = document.getElementById('controls');
+        
+        const elResult = document.getElementById('result-screen');
+        const elResPrice = document.getElementById('res-price');
+        const elResError = document.getElementById('res-error');
+        const elResPoints = document.getElementById('res-points');
+        const elBtnNext = document.getElementById('btn-next');
+
+        const elBtnShowLb = document.getElementById('btn-show-lb');
+        const elBtnCloseLb = document.getElementById('btn-close-lb');
+        const elModal = document.getElementById('lb-modal');
+        const elLbList = document.getElementById('lb-list');
+
+        // --- Инициализация ---
+        function init() {
+            updateUI();
+            nextRound();
+        }
+
+        function updateUI() {
+            elScore.innerText = formatNumber(score);
+            elStreak.innerText = streak + " 🔥";
+            
+            let currentLevel = levels[0].name;
+            for(let i=levels.length-1; i>=0; i--) {
+                if(score >= levels[i].min) {
+                    currentLevel = levels[i].name;
+                    break;
+                }
+            }
+            elLevel.innerText = currentLevel;
+        }
+
+        function formatNumber(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+        }
+
+        // --- Логика игры ---
+        function nextRound() {
+            elResult.classList.remove('active');
+            elControls.classList.remove('hidden');
+            elInput.value = '';
+            elPreview.innerText = '';
+            
+            // Анимация карточки
+            elCard.classList.add('hidden');
+            
+            setTimeout(() => {
+                // Если сыграли во всё - сбрасываем историю
+                if (playedItems.length >= items.length) playedItems = [];
+                
+                // Выбор случайного объекта
+                let availableItems = items.filter(i => !playedItems.includes(i.id));
+                currentItem = availableItems[Math.floor(Math.random() * availableItems.length)];
+                playedItems.push(currentItem.id);
+                localStorage.setItem('guessPrice_played', JSON.stringify(playedItems));
+
+                // Установка данных
+                elName.innerText = currentItem.name;
+                elDesc.innerText = currentItem.desc;
+                // Генерация изображения (Используем loremflickr с seed = id для постоянства)
+                elImg.src = `https://loremflickr.com/600/400/${currentItem.keyword}?lock=${currentItem.id}`;
+                
+                elCard.classList.remove('hidden');
+                elInput.focus();
+            }, 400);
+        }
+
+        function handleGuess() {
+            const guess = parseInt(elInput.value);
+            if (isNaN(guess) || guess <= 0) return;
+
+            const real = currentItem.price;
+            const errorRate = (Math.abs(guess - real) / real) * 100;
+            
+            let earned = 0;
+            if (errorRate <= 100) {
+                // Базовые очки
+                earned = Math.floor(1000 * (1 - errorRate/100));
+                
+                // Умножитель за серию побед (до 15% ошибки считается успехом для серии)
+                if (errorRate <= 15) {
+                    streak++;
+                    const multiplier = 1 + (streak * 0.1);
+                    earned = Math.floor(earned * multiplier);
+                } else {
+                    streak = 0;
+                }
+
+                // Бонус за точность (Конфетти)
+                if (errorRate < 5) {
+                    earned += 500;
+                    fireConfetti();
+                }
+            } else {
+                streak = 0; // Ошибка больше 100%
+            }
+
+            // Обновляем счет
+            score += earned;
+            localStorage.setItem('guessPrice_score', score);
+            localStorage.setItem('guessPrice_streak', streak);
+            
+            saveToLeaderboard(score);
+            updateUI();
+
+            // Показываем результаты
+            elControls.classList.add('hidden');
+            elResPrice.innerText = `$${formatNumber(real)}`;
+            
+            elResError.innerText = `Ошибка: ${errorRate.toFixed(1)}%`;
+            elResError.style.color = errorRate < 15 ? "var(--success-color)" : (errorRate > 50 ? "var(--danger-color)" : "var(--text-secondary)");
+            
+            elResPoints.innerText = earned > 0 ? `+${formatNumber(earned)} очков` : "0 очков";
+            
+            elResult.classList.add('active');
+        }
+
+        // --- Таблица рекордов ---
+        function saveToLeaderboard(newScore) {
+            let lb = JSON.parse(localStorage.getItem('guessPrice_lb')) || [];
+            // Добавляем текущий, сортируем, берем топ 5
+            lb.push({ date: new Date().toLocaleDateString(), score: newScore });
+            lb.sort((a,b) => b.score - a.score);
+            
+            // Оставляем только уникальные и топ 5
+            let uniqueLb = [];
+            let seen = new Set();
+            for(let item of lb) {
+                if(!seen.has(item.score)) {
+                    seen.add(item.score);
+                    uniqueLb.push(item);
+                }
+            }
+            localStorage.setItem('guessPrice_lb', JSON.stringify(uniqueLb.slice(0, 5)));
+        }
+
+        function showLeaderboard() {
+            let lb = JSON.parse(localStorage.getItem('guessPrice_lb')) || [];
+            elLbList.innerHTML = '';
+            
+            if(lb.length === 0) {
+                elLbList.innerHTML = '<li style="text-align:center; color:gray">Пока нет рекордов</li>';
+            } else {
+                lb.forEach((item, index) => {
+                    const li = document.createElement('li');
+                    li.className = 'record-item';
+                    let medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '▪️';
+                    li.innerHTML = `<span>${medal} ${formatNumber(item.score)} очков</span> <span><small style="color:var(--text-secondary)">${item.date}</small></span>`;
+                    elLbList.appendChild(li);
+                });
+            }
+            elModal.classList.add('active');
+        }
+
+        // --- Конфетти ---
+        function fireConfetti() {
+            const colors = ['#0a84ff', '#30d158', '#ff9f0a', '#ff453a', '#bf5af2'];
+            for(let i=0; i<60; i++) {
+                const conf = document.createElement('div');
+                conf.className = 'confetti';
+                conf.style.left = Math.random() * 100 + 'vw';
+                conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                conf.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                conf.style.animationDelay = (Math.random() * 0.5) + 's';
+                document.body.appendChild(conf);
+                
+                setTimeout(() => conf.remove(), 4000);
+            }
+        }
+
+        // --- Слушатели событий ---
+        elBtnGuess.addEventListener('click', handleGuess);
+        elBtnNext.addEventListener('click', nextRound);
+        
+        elInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleGuess();
+        });
+
+        // Красивое форматирование при вводе
+        elInput.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            if (!isNaN(val)) {
+                elPreview.innerText = "$ " + formatNumber(val);
+            } else {
+                elPreview.innerText = "";
+            }
+        });
+
+        elBtnShowLb.addEventListener('click', showLeaderboard);
+        elBtnCloseLb.addEventListener('click', () => elModal.classList.remove('active'));
+        elModal.addEventListener('click', (e) => {
+            if(e.target === elModal) elModal.classList.remove('active');
+        });
+
+        // Запуск
+        init();
+
+    </script>
+</body>
+</html>
