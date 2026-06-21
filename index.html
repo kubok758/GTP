@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Угадай цену</title>
+  <meta name="description" content="Современная игра: угадай стоимость объекта и набери максимум очков." />
+  <meta name="theme-color" content="#090a0f" />
+  <style>
+    :root {
+      --bg: #090a0f;
+      --bg-2: #10121b;
+      --card: rgba(255, 255, 255, .085);
+      --card-2: rgba(255, 255, 255, .12);
+      --text: #f7f8ff;
+      --muted: rgba(247, 248, 255, .64);
+      --muted-2: rgba(247, 248, 255, .42);
+      --line: rgba(255, 255, 255, .14);
+      --accent: #8fd3ff;
+      --accent-2: #a78bfa;
+      --good: #6ee7b7;
+      --warn: #fde68a;
+      --bad: #fb7185;
+      --shadow: 0 24px 80px rgba(0,0,0,.42);
+      --radius: 28px;
+      --radius-2: 20px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Arial, sans-serif;
+      background:
+        radial-gradient(circle at 15% 5%, rgba(96, 165, 250, .24), transparent 32%),
+        radial-gradient(circle at 88% 12%, rgba(167, 139, 250, .20), transparent 30%),
+        radial-gradient(circle at 55% 95%, rgba(52, 211, 153, .12), transparent 34%),
+        linear-gradient(135deg, #08090e 0%, #10121b 55%, #070810 100%);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+      background-size: 54px 54px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,.8), transparent 76%);
+      z-index: -1;
+    }
+
+    button, input {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    .app {
+      width: min(1220px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 22px 0 36px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 190px;
+    }
+
+    .logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      background:
+        linear-gradient(135deg, rgba(143, 211, 255, .95), rgba(167, 139, 250, .9));
+      box-shadow: 0 12px 35px rgba(120, 150, 255, .22);
+      color: #061019;
+      font-size: 24px;
+      font-weight: 900;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(24px, 4vw, 40px);
+      letter-spacing: -.06em;
+      line-height: 1;
+    }
+
+    .brand p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .player {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,.07);
+      backdrop-filter: blur(18px);
+    }
+
+    .player input {
+      width: 150px;
+      border: 0;
+      outline: 0;
+      border-radius: 999px;
+      padding: 11px 14px;
+      color: var(--text);
+      background: rgba(0,0,0,.22);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(255,255,255,.06);
+      white-space: nowrap;
+      font-size: 14px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(255,255,255,.105), rgba(255,255,255,.06));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(28px);
+    }
+
+    .game-card {
+      overflow: hidden;
+      transform: translateY(12px) scale(.985);
+      opacity: 0;
+      transition: opacity .48s ease, transform .48s cubic-bezier(.2,.8,.2,1);
+    }
+
+    .game-card.show {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .photo-wrap {
+      position: relative;
+      height: clamp(280px, 46vw, 570px);
+      overflow: hidden;
+      background: #121521;
+      border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
+    }
+
+    .photo-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transform: scale(1.04);
+      filter: saturate(1.05) contrast(1.04);
+      transition: transform 1.2s cubic-bezier(.2,.8,.2,1);
+    }
+
+    .game-card.show .photo-wrap img {
+      transform: scale(1);
+    }
+
+    .photo-wrap::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(to top, rgba(8,9,14,.95), transparent 42%),
+        linear-gradient(120deg, rgba(143,211,255,.14), transparent 38%, rgba(167,139,250,.12));
+      pointer-events: none;
+    }
+
+    .fallback {
+      position: absolute;
+      inset: 0;
+      display: none;
+      place-items: center;
+      text-align: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(143,211,255,.32), transparent 34%),
+        radial-gradient(circle at 78% 30%, rgba(167,139,250,.30), transparent 36%),
+        linear-gradient(135deg, #151827, #090a0f);
+    }
+
+    .fallback.active {
+      display: grid;
+    }
+
+    .fallback span {
+      font-size: clamp(56px, 11vw, 120px);
+      filter: drop-shadow(0 18px 36px rgba(0,0,0,.45));
+    }
+
+    .fallback p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .category {
+      position: absolute;
+      left: 22px;
+      top: 22px;
+      z-index: 2;
+      padding: 10px 13px;
+      border-radius: 999px;
+      background: rgba(0,0,0,.35);
+      border: 1px solid rgba(255,255,255,.22);
+      backdrop-filter: blur(18px);
+      color: rgba(255,255,255,.88);
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .price-mask {
+      position: absolute;
+      right: 22px;
+      top: 22px;
+      z-index: 2;
+      padding: 10px 13px;
+      border-radius: 999px;
+      background: rgba(0,0,0,.35);
+      border: 1px solid rgba(255,255,255,.22);
+      backdrop-filter: blur(18px);
+      color: rgba(255,255,255,.85);
+      font-weight: 800;
+      letter-spacing: .04em;
+      font-size: 14px;
+    }
+
+    .content {
+      padding: clamp(18px, 3vw, 28px);
+    }
+
+    .object-title {
+      margin: 0;
+      font-size: clamp(28px, 5vw, 52px);
+      line-height: .96;
+      letter-spacing: -.07em;
+    }
+
+    .description {
+      margin: 14px 0 22px;
+      color: var(--muted);
+      font-size: clamp(16px, 2vw, 19px);
+      line-height: 1.55;
+      max-width: 760px;
+    }
+
+    .guess-box {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: rgba(0,0,0,.20);
+    }
+
+    .input-wrap {
+      position: relative;
+    }
+
+    .input-wrap span {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted-2);
+      font-weight: 800;
+    }
+
+    #guessInput {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      padding: 17px 18px 17px 42px;
+      border-radius: 16px;
+      color: var(--text);
+      background: rgba(255,255,255,.08);
+      font-size: 20px;
+      font-weight: 750;
+      letter-spacing: -.02em;
+    }
+
+    #guessInput::placeholder {
+      color: rgba(255,255,255,.32);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      min-height: 56px;
+      padding: 0 20px;
+      border-radius: 17px;
+      color: #071019;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      font-weight: 900;
+      box-shadow: 0 14px 32px rgba(143,211,255,.18);
+      transition: transform .18s ease, filter .18s ease, box-shadow .18s ease;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.08);
+      box-shadow: 0 18px 45px rgba(143,211,255,.24);
+    }
+
+    .btn:active {
+      transform: translateY(0) scale(.98);
+    }
+
+    .btn.secondary {
+      color: var(--text);
+      background: rgba(255,255,255,.09);
+      border: 1px solid var(--line);
+      box-shadow: none;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .result {
+      margin-top: 18px;
+      display: none;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .result.show {
+      display: grid;
+      animation: pop .42s cubic-bezier(.2,.8,.2,1);
+    }
+
+    @keyframes pop {
+      from { opacity: 0; transform: translateY(10px) scale(.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .result-card {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: rgba(255,255,255,.07);
+    }
+
+    .result-card small {
+      display: block;
+      color: var(--muted);
+      margin-bottom: 7px;
+    }
+
+    .result-card strong {
+      display: block;
+      font-size: clamp(20px, 3vw, 28px);
+      letter-spacing: -.04em;
+      line-height: 1.05;
+    }
+
+    .side {
+      display: grid;
+      gap: 18px;
+      position: sticky;
+      top: 16px;
+    }
+
+    .stats {
+      padding: 18px;
+    }
+
+    .level-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 12px;
+      margin-bottom: 13px;
+    }
+
+    .level-row h2 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: -.04em;
+    }
+
+    .level-row span {
+      color: var(--accent);
+      font-weight: 900;
+    }
+
+    .progress {
+      height: 12px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255,255,255,.09);
+      border: 1px solid var(--line);
+    }
+
+    .progress > i {
+      display: block;
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), var(--good), var(--accent-2));
+      transition: width .5s ease;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .stat {
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.065);
+      border: 1px solid var(--line);
+    }
+
+    .stat small {
+      display: block;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .stat b {
+      font-size: 24px;
+      letter-spacing: -.04em;
+    }
+
+    .leaderboard {
+      padding: 18px;
+    }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .section-title h2 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: -.04em;
+    }
+
+    .link-btn {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.07);
+      color: var(--muted);
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .records {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+    }
+
+    .records th,
+    .records td {
+      padding: 11px 8px;
+      border-bottom: 1px solid rgba(255,255,255,.09);
+      text-align: left;
+      font-size: 14px;
+    }
+
+    .records th {
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .records td {
+      color: rgba(255,255,255,.88);
+    }
+
+    .records tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .empty {
+      padding: 16px;
+      color: var(--muted);
+      border: 1px dashed var(--line);
+      border-radius: 18px;
+      line-height: 1.45;
+    }
+
+    .levels {
+      padding: 18px;
+    }
+
+    .level-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .level-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 11px 12px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.055);
+      border: 1px solid rgba(255,255,255,.10);
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .level-item.active {
+      color: var(--text);
+      border-color: rgba(143,211,255,.38);
+      background: rgba(143,211,255,.10);
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%) translateY(24px);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 20;
+      padding: 12px 16px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(14,16,24,.78);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 18px 60px rgba(0,0,0,.35);
+      color: var(--text);
+      transition: .25s ease;
+      white-space: nowrap;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .shake {
+      animation: shake .28s linear;
+    }
+
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      75% { transform: translateX(6px); }
+    }
+
+    #confettiCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 30;
+    }
+
+    .footer {
+      margin-top: 18px;
+      color: var(--muted-2);
+      font-size: 13px;
+      text-align: center;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 980px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+      .side {
+        position: static;
+        grid-template-columns: 1fr 1fr;
+      }
+      .levels {
+        grid-column: 1 / -1;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .app {
+        width: min(100% - 18px, 1220px);
+        padding-top: 12px;
+      }
+
+      .topbar {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .player {
+        width: 100%;
+        justify-content: space-between;
+        border-radius: 22px;
+        flex-wrap: wrap;
+      }
+
+      .player input {
+        flex: 1;
+        min-width: 160px;
+      }
+
+      .guess-box {
+        grid-template-columns: 1fr;
+      }
+
+      .btn {
+        width: 100%;
+      }
+
+      .result {
+        grid-template-columns: 1fr;
+      }
+
+      .side {
+        grid-template-columns: 1fr;
+      }
+
+      .photo-wrap {
+        height: 330px;
+      }
+
+      .category,
+      .price-mask {
+        top: 14px;
+        left: 14px;
+        right: auto;
+        font-size: 13px;
+      }
+
+      .price-mask {
+        top: 58px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .stat-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .object-title {
+        font-size: 30px;
+      }
+
+      #guessInput {
+        font-size: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="confettiCanvas"></canvas>
+
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">₽</div>
+        <div>
+          <h1>Угадай цену</h1>
+          <p>Сколько это стоит? Проверь ценовой радар.</p>
+        </div>
+      </div>
+
+      <div class="player">
+        <span class="pill">👤 Игрок</span>
+        <input id="playerName" maxlength="18" autocomplete="off" placeholder="Твоё имя" />
+        <button class="link-btn" id="resetProgressBtn" title="Сбросить текущий прогресс">Сброс</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel game-card" id="gameCard">
+        <div class="photo-wrap">
+          <img id="objectPhoto" alt="Фото объекта" />
+          <div class="fallback" id="fallback">
+            <div>
+              <span id="fallbackEmoji">💎</span>
+              <p>Фото не загрузилось, но объект всё ещё можно угадать</p>
+            </div>
+          </div>
+          <div class="category" id="categoryChip">Категория</div>
+          <div class="price-mask">Цена скрыта</div>
+        </div>
+
+        <div class="content">
+          <h2 class="object-title" id="objectTitle">Название</h2>
+          <p class="description" id="objectDescription">Описание</p>
+
+          <div class="guess-box" id="guessBox">
+            <div class="input-wrap">
+              <span>₽</span>
+              <input id="guessInput" type="text" inputmode="numeric" placeholder="Введи цену, например 12000000" />
+            </div>
+            <button class="btn" id="guessBtn">Угадать</button>
+          </div>
+
+          <div class="actions">
+            <button class="btn secondary" id="skipBtn">Другой объект</button>
+          </div>
+
+          <div class="result" id="result">
+            <div class="result-card">
+              <small>Реальная цена</small>
+              <strong id="realPrice">—</strong>
+            </div>
+            <div class="result-card">
+              <small>Ошибка</small>
+              <strong id="errorPercent">—</strong>
+            </div>
+            <div class="result-card">
+              <small>Очки</small>
+              <strong id="pointsEarned">—</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="side">
+        <section class="panel stats">
+          <div class="level-row">
+            <div>
+              <h2>Уровень</h2>
+              <span id="levelName">Новичок</span>
+            </div>
+            <span id="levelProgressText">0%</span>
+          </div>
+          <div class="progress"><i id="levelProgress"></i></div>
+
+          <div class="stat-grid">
+            <div class="stat">
+              <small>Очки</small>
+              <b id="score">0</b>
+            </div>
+            <div class="stat">
+              <small>Раунды</small>
+              <b id="rounds">0</b>
+            </div>
+            <div class="stat">
+              <small>Серия</small>
+              <b id="streak">0</b>
+            </div>
+            <div class="stat">
+              <small>Лучшая серия</small>
+              <b id="bestStreak">0</b>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel leaderboard">
+          <div class="section-title">
+            <h2>Рекорды</h2>
+            <button class="link-btn" id="clearRecordsBtn">Очистить</button>
+          </div>
+          <div id="recordsBox"></div>
+        </section>
+
+        <section class="panel levels">
+          <div class="section-title">
+            <h2>Лиги</h2>
+            <span class="pill">100+ объектов</span>
+          </div>
+          <div class="level-list" id="levelList"></div>
+        </section>
+      </aside>
+    </main>
+
+    <p class="footer">
+      Цены в игре примерные и нужны для развлечения. Фото подгружаются из открытых онлайн-источников по ключевым словам; если фото не загрузилось, появится стильная заглушка.
+    </p>
+  </div>
+
+  <div class="toast" id="toast">Готово</div>
+
+  <script>
+    const OBJECTS = [{"id":1,"category":"Автомобили","title":"BMW M5 F90 Competition","desc":"Быстрый бизнес-седан с V8, полным приводом и характером суперкара.","price":12000000,"query":"BMW M5 F90 Competition car"},{"id":2,"category":"Автомобили","title":"Tesla Model S Plaid","desc":"Электрический лифтбек с безумным разгоном и минималистичным салоном.","price":11500000,"query":"Tesla Model S Plaid"},{"id":3,"category":"Автомобили","title":"Lada Vesta Sportline","desc":"Спортивная версия российского седана с более агрессивным дизайном.","price":2800000,"query":"Lada Vesta Sport car"},{"id":4,"category":"Автомобили","title":"Porsche 911 Turbo S","desc":"Культовый спорткар с полным приводом и разгоном уровня ракеты.","price":27000000,"query":"Porsche 911 Turbo S"},{"id":5,"category":"Автомобили","title":"Mercedes-Benz G 63 AMG","desc":"Легендарный квадратный внедорожник с мощным V8 и премиальным салоном.","price":32000000,"query":"Mercedes G63 AMG"},{"id":6,"category":"Автомобили","title":"Toyota Land Cruiser 300","desc":"Большой рамный внедорожник для дальних дорог и сложных условий.","price":14500000,"query":"Toyota Land Cruiser 300"},{"id":7,"category":"Автомобили","title":"Rolls-Royce Cullinan","desc":"Один из самых роскошных SUV в мире, где комфорт важнее всего.","price":65000000,"query":"Rolls Royce Cullinan"},{"id":8,"category":"Автомобили","title":"Lamborghini Urus Performante","desc":"Супер-SUV с резким характером, карбоном и громким V8.","price":52000000,"query":"Lamborghini Urus Performante"},{"id":9,"category":"Автомобили","title":"Ferrari SF90 Stradale","desc":"Гибридный гиперкар Ferrari с невероятной мощностью и аэродинамикой.","price":85000000,"query":"Ferrari SF90 Stradale"},{"id":10,"category":"Автомобили","title":"Bugatti Chiron","desc":"Гиперкар на 1500+ л.с., созданный для скоростей за гранью обычного.","price":350000000,"query":"Bugatti Chiron"},{"id":11,"category":"Смартфоны","title":"iPhone 16 Pro Max 1 ТБ","desc":"Флагман Apple с большим OLED-экраном, топовой камерой и максимумом памяти.","price":210000,"query":"iPhone Pro Max smartphone"},{"id":12,"category":"Смартфоны","title":"Samsung Galaxy S25 Ultra 1 ТБ","desc":"Android-флагман с пером, мощной камерой и большим экраном.","price":175000,"query":"Samsung Galaxy Ultra smartphone"},{"id":13,"category":"Смартфоны","title":"Google Pixel 9 Pro XL","desc":"Смартфон с сильной камерой, чистым Android и AI-функциями.","price":130000,"query":"Google Pixel Pro smartphone"},{"id":14,"category":"Смартфоны","title":"Xiaomi 15 Ultra","desc":"Камерофон с крупным модулем камер и мощным процессором.","price":125000,"query":"Xiaomi Ultra smartphone"},{"id":15,"category":"Смартфоны","title":"Huawei Mate XT Ultimate","desc":"Складной премиальный смартфон необычного формата с большим экраном.","price":330000,"query":"Huawei foldable smartphone"},{"id":16,"category":"Смартфоны","title":"Vivo X200 Pro","desc":"Флагман с сильной камерой, большим аккумулятором и быстрым чипом.","price":115000,"query":"Vivo X200 Pro smartphone"},{"id":17,"category":"Смартфоны","title":"Nothing Phone 2a","desc":"Стильный смартфон с прозрачным дизайном и световыми элементами.","price":38000,"query":"Nothing Phone smartphone"},{"id":18,"category":"Смартфоны","title":"OnePlus 13","desc":"Быстрый Android-флагман с плавным экраном и мощной зарядкой.","price":95000,"query":"OnePlus smartphone"},{"id":19,"category":"Смартфоны","title":"iPhone SE 2022","desc":"Компактный iPhone с классическим дизайном и кнопкой Home.","price":42000,"query":"iPhone SE smartphone"},{"id":20,"category":"Смартфоны","title":"Samsung Galaxy Z Fold 6","desc":"Складной смартфон-планшет для многозадачности и большого экрана в кармане.","price":190000,"query":"Samsung Galaxy Z Fold"},{"id":21,"category":"Недвижимость","title":"Студия в Санкт-Петербурге","desc":"Компактная квартира в новом доме на окраине города.","price":6500000,"query":"studio apartment interior"},{"id":22,"category":"Недвижимость","title":"Трёхкомнатная квартира в Москве","desc":"Просторная городская квартира с хорошей транспортной доступностью.","price":32000000,"query":"modern city apartment"},{"id":23,"category":"Недвижимость","title":"Загородный дом 180 м²","desc":"Семейный дом с участком, террасой и гаражом.","price":24000000,"query":"modern country house"},{"id":24,"category":"Недвижимость","title":"Пентхаус с видом на город","desc":"Верхний этаж, панорамные окна, терраса и премиальная отделка.","price":180000000,"query":"luxury penthouse city view"},{"id":25,"category":"Недвижимость","title":"Вилла на берегу моря","desc":"Дом с бассейном, пальмами и прямым выходом к воде.","price":260000000,"query":"luxury villa by the sea"},{"id":26,"category":"Недвижимость","title":"Таунхаус в пригороде","desc":"Комфортный дом для семьи в закрытом посёлке.","price":38000000,"query":"modern townhouse"},{"id":27,"category":"Недвижимость","title":"Лофт в старом здании","desc":"Высокие потолки, кирпичные стены и стильная открытая планировка.","price":22000000,"query":"industrial loft apartment"},{"id":28,"category":"Недвижимость","title":"Шале в горах","desc":"Деревянный дом с камином и видом на снежные вершины.","price":95000000,"query":"mountain chalet luxury"},{"id":29,"category":"Недвижимость","title":"Мини-дом 30 м²","desc":"Компактный tiny house для минималистов и путешественников.","price":4500000,"query":"tiny house modern"},{"id":30,"category":"Недвижимость","title":"Особняк с бассейном","desc":"Большая резиденция с садом, бассейном и несколькими гаражами.","price":450000000,"query":"luxury mansion pool"},{"id":31,"category":"Яхты","title":"Небольшой катер Bayliner","desc":"Прогулочный катер для отдыха на воде и коротких поездок.","price":6500000,"query":"Bayliner boat"},{"id":32,"category":"Яхты","title":"Парусная яхта Beneteau Oceanis","desc":"Классическая парусная яхта для путешествий и спокойного отдыха.","price":28000000,"query":"Beneteau Oceanis sailboat"},{"id":33,"category":"Яхты","title":"Princess V50","desc":"Премиальная моторная яхта с каютами и просторной палубой.","price":85000000,"query":"Princess V50 yacht"},{"id":34,"category":"Яхты","title":"Sunseeker Predator 74","desc":"Спортивная яхта с агрессивным дизайном и мощными двигателями.","price":210000000,"query":"Sunseeker Predator yacht"},{"id":35,"category":"Яхты","title":"Azimut Grande 27M","desc":"Большая итальянская яхта с роскошными каютами и флайбриджем.","price":850000000,"query":"Azimut Grande yacht"},{"id":36,"category":"Яхты","title":"Суперъяхта 80 метров","desc":"Плавающий дворец с экипажем, вертолётной площадкой и несколькими палубами.","price":9500000000,"query":"80 meter superyacht"},{"id":37,"category":"Яхты","title":"Гидроцикл Yamaha FX Cruiser","desc":"Быстрый водный мотоцикл для активного отдыха.","price":2500000,"query":"Yamaha jetski"},{"id":38,"category":"Яхты","title":"Катамаран Lagoon 46","desc":"Просторный катамаран для семейных морских путешествий.","price":70000000,"query":"Lagoon 46 catamaran"},{"id":39,"category":"Яхты","title":"Riva Aquarama Classic","desc":"Легендарный деревянный катер, символ итальянского стиля.","price":60000000,"query":"Riva Aquarama boat"},{"id":40,"category":"Яхты","title":"Надувная лодка с мотором","desc":"Практичный комплект для рыбалки и выездов на озеро.","price":180000,"query":"inflatable motor boat"},{"id":41,"category":"Компьютеры","title":"MacBook Pro 16 M4 Max","desc":"Мощный ноутбук Apple для монтажа, 3D, кода и тяжёлых задач.","price":520000,"query":"MacBook Pro 16"},{"id":42,"category":"Компьютеры","title":"Игровой ПК RTX 4090","desc":"Топовая сборка для 4K-гейминга, стриминга и нейросетей.","price":520000,"query":"gaming pc RTX 4090"},{"id":43,"category":"Компьютеры","title":"Офисный мини-ПК","desc":"Компактный компьютер для браузера, документов и учёбы.","price":45000,"query":"mini pc computer"},{"id":44,"category":"Компьютеры","title":"iMac 24 M4","desc":"Моноблок Apple с тонким корпусом и ярким экраном.","price":210000,"query":"Apple iMac 24"},{"id":45,"category":"Компьютеры","title":"Mac Studio M2 Ultra","desc":"Компактная рабочая станция Apple для профессиональных задач.","price":650000,"query":"Mac Studio computer"},{"id":46,"category":"Компьютеры","title":"ASUS ROG Zephyrus G16","desc":"Тонкий игровой ноутбук с мощной графикой и OLED-экраном.","price":300000,"query":"ASUS ROG Zephyrus laptop"},{"id":47,"category":"Компьютеры","title":"Steam Deck OLED 1 ТБ","desc":"Портативная игровая консоль-ПК для игр из Steam.","price":85000,"query":"Steam Deck OLED"},{"id":48,"category":"Компьютеры","title":"Рабочая станция Threadripper","desc":"Очень мощный ПК для рендера, симуляций и тяжёлого продакшена.","price":1100000,"query":"workstation computer threadripper"},{"id":49,"category":"Компьютеры","title":"Бюджетный ноутбук для учёбы","desc":"Простой ноутбук для школы, видео, документов и браузера.","price":42000,"query":"budget laptop"},{"id":50,"category":"Компьютеры","title":"Apple Pro Display XDR","desc":"Профессиональный 6K-монитор Apple с высокой яркостью.","price":520000,"query":"Apple Pro Display XDR"},{"id":51,"category":"Роскошь","title":"Rolex Submariner Date","desc":"Культовые механические часы, узнаваемые даже издалека.","price":1800000,"query":"Rolex Submariner"},{"id":52,"category":"Роскошь","title":"Patek Philippe Nautilus","desc":"Одни из самых желанных люксовых часов на вторичном рынке.","price":12000000,"query":"Patek Philippe Nautilus"},{"id":53,"category":"Роскошь","title":"Hermès Birkin 30","desc":"Легендарная сумка, цена которой часто растёт с годами.","price":2500000,"query":"Hermes Birkin bag"},{"id":54,"category":"Роскошь","title":"Louis Vuitton чемодан Horizon","desc":"Дизайнерский чемодан для путешествий с премиальной отделкой.","price":420000,"query":"Louis Vuitton suitcase"},{"id":55,"category":"Роскошь","title":"Кольцо с бриллиантом 2 карата","desc":"Ювелирное украшение с крупным камнем и классической оправой.","price":1500000,"query":"diamond ring 2 carat"},{"id":56,"category":"Роскошь","title":"Золотой слиток 1 кг","desc":"Инвестиционный слиток чистого золота весом один килограмм.","price":7400000,"query":"gold bar 1kg"},{"id":57,"category":"Роскошь","title":"Montblanc Meisterstück","desc":"Премиальная перьевая ручка для тех, кто любит дорогую классику.","price":85000,"query":"Montblanc Meisterstuck pen"},{"id":58,"category":"Роскошь","title":"Gucci кожаная куртка","desc":"Дизайнерская куртка из натуральной кожи с фирменным стилем.","price":390000,"query":"Gucci leather jacket"},{"id":59,"category":"Роскошь","title":"Baccarat хрустальная люстра","desc":"Роскошная люстра ручной работы из французского хрусталя.","price":1800000,"query":"Baccarat crystal chandelier"},{"id":60,"category":"Роскошь","title":"Частный винный погреб","desc":"Коллекция редких вин с системой хранения и климат-контролем.","price":6500000,"query":"luxury wine cellar"},{"id":61,"category":"Техника","title":"iPad Pro 11 M5 1 ТБ","desc":"Тонкий планшет с OLED-экраном, мощным чипом и большим запасом памяти.","price":185000,"query":"iPad Pro 11"},{"id":62,"category":"Техника","title":"Apple Vision Pro","desc":"Гарнитура смешанной реальности с дорогими дисплеями и датчиками.","price":420000,"query":"Apple Vision Pro"},{"id":63,"category":"Техника","title":"Sony A7R V","desc":"Полнокадровая камера с высоким разрешением для фото и видео.","price":390000,"query":"Sony A7R V camera"},{"id":64,"category":"Техника","title":"DJI Mavic 3 Pro Cine","desc":"Профессиональный дрон с несколькими камерами и качественной съёмкой.","price":520000,"query":"DJI Mavic 3 Pro drone"},{"id":65,"category":"Техника","title":"PlayStation 5 Slim","desc":"Популярная игровая консоль Sony для игр нового поколения.","price":65000,"query":"PlayStation 5 Slim"},{"id":66,"category":"Техника","title":"Xbox Series X","desc":"Мощная консоль Microsoft с поддержкой 4K и Game Pass.","price":60000,"query":"Xbox Series X"},{"id":67,"category":"Техника","title":"Samsung 98-дюймовый Neo QLED","desc":"Огромный телевизор для домашнего кинотеатра.","price":950000,"query":"Samsung 98 inch Neo QLED TV"},{"id":68,"category":"Техника","title":"Bang & Olufsen Beolab 90","desc":"Премиальные акустические колонки с футуристичным дизайном.","price":13000000,"query":"Bang Olufsen Beolab 90"},{"id":69,"category":"Техника","title":"Dyson Gen5detect","desc":"Беспроводной пылесос с лазерной подсветкой пыли.","price":90000,"query":"Dyson vacuum cleaner"},{"id":70,"category":"Техника","title":"Dreame L40 Ultra","desc":"Робот-пылесос со станцией самоочистки, мойкой пола и сушкой мопов.","price":85000,"query":"robot vacuum cleaner station"},{"id":71,"category":"Авиация","title":"Cessna 172 Skyhawk","desc":"Популярный лёгкий самолёт для обучения и частных полётов.","price":45000000,"query":"Cessna 172 airplane"},{"id":72,"category":"Авиация","title":"Robinson R44","desc":"Четырёхместный вертолёт для частных перелётов и обучения.","price":65000000,"query":"Robinson R44 helicopter"},{"id":73,"category":"Авиация","title":"Gulfstream G650ER","desc":"Дальний бизнес-джет для межконтинентальных перелётов.","price":7200000000,"query":"Gulfstream G650ER private jet"},{"id":74,"category":"Авиация","title":"Airbus A320neo","desc":"Пассажирский лайнер для авиакомпаний на средних маршрутах.","price":11000000000,"query":"Airbus A320neo"},{"id":75,"category":"Авиация","title":"Boeing 787 Dreamliner","desc":"Широкофюзеляжный самолёт для дальних международных перелётов.","price":25000000000,"query":"Boeing 787 Dreamliner"},{"id":76,"category":"Авиация","title":"Learjet 75 Liberty","desc":"Компактный бизнес-джет для быстрых деловых перелётов.","price":1300000000,"query":"Learjet 75 Liberty"},{"id":77,"category":"Авиация","title":"Парамотор","desc":"Небольшой летательный аппарат с парапланом и мотором за спиной.","price":850000,"query":"paramotor flying"},{"id":78,"category":"Авиация","title":"DJI Inspire 3","desc":"Кинематографический дрон для профессиональной съёмки.","price":1300000,"query":"DJI Inspire 3 drone"},{"id":79,"category":"Авиация","title":"Планер Schleicher ASG 32","desc":"Спортивный планер для длительных безмоторных полётов.","price":28000000,"query":"glider aircraft"},{"id":80,"category":"Авиация","title":"Воздушный шар","desc":"Большой аэростат для прогулочных полётов и фестивалей.","price":4500000,"query":"hot air balloon"},{"id":81,"category":"Искусство","title":"Картина современного художника","desc":"Оригинальное полотно из галереи, цена зависит от имени автора.","price":650000,"query":"modern art painting gallery"},{"id":82,"category":"Искусство","title":"Banksy принт с подписью","desc":"Коллекционный принт известного уличного художника.","price":9000000,"query":"Banksy artwork"},{"id":83,"category":"Искусство","title":"Антикварная икона XIX века","desc":"Старинный предмет коллекционирования с исторической ценностью.","price":1200000,"query":"antique icon art"},{"id":84,"category":"Искусство","title":"Скульптура из бронзы","desc":"Интерьерная скульптура ручной работы для коллекции или дома.","price":1800000,"query":"bronze sculpture"},{"id":85,"category":"Искусство","title":"Редкая виниловая пластинка","desc":"Коллекционное издание альбома с ограниченным тиражом.","price":250000,"query":"rare vinyl record"},{"id":86,"category":"Искусство","title":"Первое издание книги","desc":"Редкая книга в хорошем состоянии для коллекционеров.","price":3500000,"query":"rare first edition book"},{"id":87,"category":"Искусство","title":"Фотография с автографом","desc":"Коллекционный снимок знаменитости с подтверждённой подписью.","price":180000,"query":"signed photograph collectible"},{"id":88,"category":"Искусство","title":"NFT-арт коллекционного уровня","desc":"Цифровой арт-объект, цена которого может резко меняться.","price":1200000,"query":"digital art NFT"},{"id":89,"category":"Искусство","title":"Фарфоровая статуэтка Meissen","desc":"Коллекционная фарфоровая фигурка европейской мануфактуры.","price":650000,"query":"Meissen porcelain figurine"},{"id":90,"category":"Искусство","title":"Ретро-плакат кино","desc":"Оригинальный винтажный постер известного фильма.","price":450000,"query":"vintage movie poster"},{"id":91,"category":"Спорт","title":"Горный велосипед карбон","desc":"Лёгкий MTB с карбоновой рамой и профессиональной навеской.","price":420000,"query":"carbon mountain bike"},{"id":92,"category":"Спорт","title":"Электровелосипед Specialized","desc":"Премиальный e-bike с мощным мотором и большим запасом хода.","price":780000,"query":"Specialized electric bike"},{"id":93,"category":"Спорт","title":"Гоночный картинг Rotax","desc":"Спортивный карт для трековых тренировок и соревнований.","price":650000,"query":"racing go kart"},{"id":94,"category":"Спорт","title":"Снегоход Ski-Doo","desc":"Мощная техника для зимних поездок по снегу и лесу.","price":1900000,"query":"Ski Doo snowmobile"},{"id":95,"category":"Спорт","title":"Квадроцикл Can-Am Outlander","desc":"Проходимый ATV для бездорожья, охоты и активного отдыха.","price":2500000,"query":"Can Am Outlander ATV"},{"id":96,"category":"Спорт","title":"Гидрокостюм для дайвинга","desc":"Профессиональный комплект для холодной воды и глубоких погружений.","price":120000,"query":"diving dry suit"},{"id":97,"category":"Спорт","title":"Симулятор Fanatec DD Pro","desc":"Руль с direct drive базой для реалистичных автосимуляторов.","price":180000,"query":"Fanatec racing simulator"},{"id":98,"category":"Спорт","title":"Домашний тренажёр Tonal","desc":"Умная силовая станция с цифровым сопротивлением.","price":450000,"query":"smart home gym"},{"id":99,"category":"Спорт","title":"Профессиональная беговая дорожка","desc":"Надёжная дорожка для домашних тренировок и кардио.","price":320000,"query":"professional treadmill"},{"id":100,"category":"Спорт","title":"Комплект горных лыж премиум","desc":"Лыжи, крепления, ботинки и экипировка высокого уровня.","price":260000,"query":"premium skis equipment"},{"id":101,"category":"Музыка","title":"Рояль Steinway & Sons Model D","desc":"Концертный рояль ручной работы для больших залов.","price":21000000,"query":"Steinway Model D piano"},{"id":102,"category":"Музыка","title":"Электрогитара Gibson Les Paul Custom","desc":"Культовая гитара с плотным звуком и премиальной отделкой.","price":650000,"query":"Gibson Les Paul Custom"},{"id":103,"category":"Музыка","title":"Синтезатор Yamaha Montage M8x","desc":"Профессиональная клавишная станция для сцены и студии.","price":520000,"query":"Yamaha Montage synthesizer"},{"id":104,"category":"Музыка","title":"Студийный микрофон Neumann U87","desc":"Легендарный микрофон для вокала, подкастов и студийной записи.","price":420000,"query":"Neumann U87 microphone"},{"id":105,"category":"Музыка","title":"Наушники Focal Utopia","desc":"Аудиофильские наушники высокого класса для детального звучания.","price":480000,"query":"Focal Utopia headphones"},{"id":106,"category":"Музыка","title":"DJ-контроллер Pioneer XDJ-RX3","desc":"Профессиональный контроллер для клубных сетов и домашних выступлений.","price":310000,"query":"Pioneer DJ controller"},{"id":107,"category":"Музыка","title":"Скрипка ручной работы","desc":"Акустический инструмент мастера с индивидуальным звучанием.","price":1200000,"query":"handmade violin"},{"id":108,"category":"Музыка","title":"Барабанная установка DW Collector's","desc":"Премиальная ударная установка для сцены и студии.","price":900000,"query":"DW drum kit"},{"id":109,"category":"Музыка","title":"Домашняя студия звукозаписи","desc":"Комплект мониторов, интерфейса, микрофона и акустической обработки.","price":750000,"query":"home recording studio"},{"id":110,"category":"Музыка","title":"Виниловый проигрыватель McIntosh","desc":"Премиальный проигрыватель для коллекционеров винила.","price":850000,"query":"McIntosh turntable"},{"id":111,"category":"Разное","title":"Часы Apple Watch Ultra 2","desc":"Защищённые умные часы Apple с большим экраном и спортивными функциями.","price":90000,"query":"Apple Watch Ultra"},{"id":112,"category":"Разное","title":"Galaxy Watch Ultra","desc":"Прочные умные часы Samsung для спорта, навигации и уведомлений.","price":65000,"query":"Samsung Galaxy Watch Ultra"},{"id":113,"category":"Разное","title":"LEGO Millennium Falcon UCS","desc":"Огромный коллекционный набор LEGO по Star Wars.","price":120000,"query":"LEGO Millennium Falcon UCS"},{"id":114,"category":"Разное","title":"Кофемашина La Marzocco Linea Mini","desc":"Домашняя эспрессо-машина почти профессионального уровня.","price":650000,"query":"La Marzocco Linea Mini"},{"id":115,"category":"Разное","title":"Кресло Herman Miller Aeron","desc":"Известное эргономичное кресло для долгой работы за компьютером.","price":180000,"query":"Herman Miller Aeron chair"},{"id":116,"category":"Разное","title":"Сейф с биометрическим замком","desc":"Тяжёлый домашний сейф для документов, денег и ценностей.","price":250000,"query":"luxury safe biometric"},{"id":117,"category":"Разное","title":"Промышленный 3D-принтер","desc":"Большой принтер для прототипов, инженерных деталей и малого производства.","price":1800000,"query":"industrial 3D printer"},{"id":118,"category":"Разное","title":"Смарт-кровать с климат-контролем","desc":"Кровать, которая регулирует температуру и анализирует сон.","price":750000,"query":"smart bed luxury"},{"id":119,"category":"Разное","title":"Мраморная ванна ручной работы","desc":"Тяжёлая дизайнерская ванна из натурального камня.","price":1200000,"query":"marble bathtub luxury"},{"id":120,"category":"Разное","title":"Домашний кинотеатр премиум","desc":"Проектор, акустика, экран и удобные кресла для кино дома.","price":2500000,"query":"luxury home theater"}];
+
+    const LEVELS = [
+      { name: "Новичок", min: 0 },
+      { name: "Любитель", min: 5000 },
+      { name: "Эксперт", min: 20000 },
+      { name: "Миллионер", min: 60000 },
+      { name: "Ценовой Гуру", min: 120000 }
+    ];
+
+    const STORAGE_STATE = "guess_price_state_v1";
+    const STORAGE_RECORDS = "guess_price_records_v1";
+
+    const emojiByCategory = {
+      "Автомобили": "🏎️",
+      "Смартфоны": "📱",
+      "Недвижимость": "🏠",
+      "Яхты": "🛥️",
+      "Компьютеры": "💻",
+      "Роскошь": "💎",
+      "Техника": "🎮",
+      "Авиация": "✈️",
+      "Искусство": "🎨",
+      "Спорт": "🚴",
+      "Музыка": "🎹",
+      "Разное": "✨"
+    };
+
+    const $ = (selector) => document.querySelector(selector);
+
+    const els = {
+      card: $("#gameCard"),
+      photo: $("#objectPhoto"),
+      fallback: $("#fallback"),
+      fallbackEmoji: $("#fallbackEmoji"),
+      title: $("#objectTitle"),
+      desc: $("#objectDescription"),
+      category: $("#categoryChip"),
+      guessInput: $("#guessInput"),
+      guessBox: $("#guessBox"),
+      guessBtn: $("#guessBtn"),
+      skipBtn: $("#skipBtn"),
+      result: $("#result"),
+      realPrice: $("#realPrice"),
+      errorPercent: $("#errorPercent"),
+      pointsEarned: $("#pointsEarned"),
+      score: $("#score"),
+      rounds: $("#rounds"),
+      streak: $("#streak"),
+      bestStreak: $("#bestStreak"),
+      levelName: $("#levelName"),
+      levelProgress: $("#levelProgress"),
+      levelProgressText: $("#levelProgressText"),
+      recordsBox: $("#recordsBox"),
+      levelList: $("#levelList"),
+      playerName: $("#playerName"),
+      resetProgressBtn: $("#resetProgressBtn"),
+      clearRecordsBtn: $("#clearRecordsBtn"),
+      toast: $("#toast"),
+      confetti: $("#confettiCanvas")
+    };
+
+    let currentObject = null;
+    let answered = false;
+
+    const defaultState = () => ({
+      runId: makeId(),
+      playerName: "Игрок",
+      score: 0,
+      rounds: 0,
+      streak: 0,
+      bestStreak: 0,
+      usedIds: []
+    });
+
+    let state = loadState();
+
+    function makeId() {
+      return "run_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+    }
+
+    function loadState() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(STORAGE_STATE));
+        return { ...defaultState(), ...(parsed || {}) };
+      } catch {
+        return defaultState();
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_STATE, JSON.stringify(state));
+    }
+
+    function loadRecords() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_RECORDS)) || [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveRecords(records) {
+      localStorage.setItem(STORAGE_RECORDS, JSON.stringify(records));
+    }
+
+    function money(value) {
+      return new Intl.NumberFormat("ru-RU", {
+        style: "currency",
+        currency: "RUB",
+        maximumFractionDigits: 0
+      }).format(value);
+    }
+
+    function number(value) {
+      return new Intl.NumberFormat("ru-RU").format(value);
+    }
+
+    function compact(value) {
+      return new Intl.NumberFormat("ru-RU", {
+        notation: "compact",
+        maximumFractionDigits: 1
+      }).format(value);
+    }
+
+    function cleanPriceInput(value) {
+      return Number(String(value).replace(/[\s₽_]/g, "").replace(",", "."));
+    }
+
+    function imageUrl(obj) {
+      return `https://source.unsplash.com/1600x1000/?${encodeURIComponent(obj.query)}&sig=${obj.id}`;
+    }
+
+    function getLevel(score = state.score) {
+      let index = 0;
+      for (let i = 0; i < LEVELS.length; i++) {
+        if (score >= LEVELS[i].min) index = i;
+      }
+
+      const current = LEVELS[index];
+      const next = LEVELS[index + 1];
+
+      if (!next) {
+        return { ...current, index, percent: 100, next: null };
+      }
+
+      const progress = ((score - current.min) / (next.min - current.min)) * 100;
+      return { ...current, index, percent: Math.max(0, Math.min(100, progress)), next };
+    }
+
+    function renderStats() {
+      const level = getLevel();
+
+      els.score.textContent = number(state.score);
+      els.rounds.textContent = number(state.rounds);
+      els.streak.textContent = number(state.streak);
+      els.bestStreak.textContent = number(state.bestStreak);
+      els.levelName.textContent = level.name;
+      els.levelProgress.style.width = level.percent + "%";
+      els.levelProgressText.textContent = level.next
+        ? `${Math.round(level.percent)}%`
+        : "MAX";
+
+      els.playerName.value = state.playerName;
+
+      els.levelList.innerHTML = LEVELS.map((lvl, index) => `
+        <div class="level-item ${index === level.index ? "active" : ""}">
+          <span>${lvl.name}</span>
+          <b>${number(lvl.min)} очк.</b>
+        </div>
+      `).join("");
+    }
+
+    function renderRecords() {
+      const records = loadRecords();
+
+      if (!records.length) {
+        els.recordsBox.innerHTML = `<div class="empty">Пока рекордов нет. Сделай первый забег — таблица сохранится прямо в браузере.</div>`;
+        return;
+      }
+
+      els.recordsBox.innerHTML = `
+        <table class="records">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Игрок</th>
+              <th>Очки</th>
+              <th>Серия</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${records.slice(0, 10).map((r, i) => `
+              <tr>
+                <td>${i + 1}</td>
+                <td>${escapeHtml(r.name)}</td>
+                <td><b>${number(r.score)}</b></td>
+                <td>${number(r.bestStreak)}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      }[char]));
+    }
+
+    function pickObject() {
+      if (state.usedIds.length >= OBJECTS.length) {
+        state.usedIds = [];
+      }
+
+      const pool = OBJECTS.filter(obj => !state.usedIds.includes(obj.id));
+      currentObject = pool[Math.floor(Math.random() * pool.length)];
+      answered = false;
+      saveState();
+      renderCard();
+    }
+
+    function renderCard() {
+      els.card.classList.remove("show");
+      els.result.classList.remove("show");
+      els.result.style.display = "";
+      els.guessInput.value = "";
+      els.guessInput.disabled = false;
+      els.guessBtn.textContent = "Угадать";
+
+      window.setTimeout(() => {
+        els.title.textContent = currentObject.title;
+        els.desc.textContent = currentObject.desc;
+        els.category.textContent = currentObject.category;
+        els.fallbackEmoji.textContent = emojiByCategory[currentObject.category] || "✨";
+        els.fallback.classList.remove("active");
+        els.photo.style.display = "block";
+        els.photo.alt = currentObject.title;
+        els.photo.src = imageUrl(currentObject);
+
+        els.card.classList.add("show");
+        els.guessInput.focus({ preventScroll: true });
+      }, 120);
+    }
+
+    function calculatePoints(error) {
+      let base = Math.max(0, Math.round(1200 * Math.exp(-error / 30)));
+
+      if (error > 100) base = Math.round(base * 0.3);
+      if (error < 1) base += 500;
+      if (error < 5) base += 350;
+
+      const victory = error <= 15;
+      const streakBonus = victory ? Math.min(800, (state.streak + 1) * 35) : 0;
+
+      return {
+        points: base + streakBonus,
+        victory,
+        precise: error < 5
+      };
+    }
+
+    function handleGuess() {
+      if (answered) {
+        pickObject();
+        return;
+      }
+
+      const guessed = cleanPriceInput(els.guessInput.value);
+
+      if (!Number.isFinite(guessed) || guessed <= 0) {
+        els.guessBox.classList.remove("shake");
+        void els.guessBox.offsetWidth;
+        els.guessBox.classList.add("shake");
+        showToast("Введи нормальную цену числом");
+        return;
+      }
+
+      const real = currentObject.price;
+      const error = Math.abs(guessed - real) / real * 100;
+      const result = calculatePoints(error);
+
+      if (result.victory) {
+        state.streak += 1;
+      } else {
+        state.streak = 0;
+      }
+
+      state.score += result.points;
+      state.rounds += 1;
+      state.bestStreak = Math.max(state.bestStreak, state.streak);
+
+      if (!state.usedIds.includes(currentObject.id)) {
+        state.usedIds.push(currentObject.id);
+      }
+
+      answered = true;
+      saveState();
+      saveRunRecord();
+      renderStats();
+      renderRecords();
+
+      els.realPrice.textContent = money(real);
+      els.errorPercent.textContent = `${error.toFixed(error < 10 ? 1 : 0)}%`;
+      els.pointsEarned.textContent = `+${number(result.points)}`;
+      els.result.classList.add("show");
+      els.guessInput.disabled = true;
+      els.guessBtn.textContent = "Следующий объект";
+
+      if (result.precise) {
+        confetti();
+        showToast("Очень точно! Конфетти заслужено 🎉");
+      } else if (result.victory) {
+        showToast("Отлично, серия продолжается 🔥");
+      } else {
+        showToast("Мимо, серия сброшена. Следующий шанс!");
+      }
+    }
+
+    function saveRunRecord() {
+      const records = loadRecords();
+      const existingIndex = records.findIndex(r => r.id === state.runId);
+
+      const record = {
+        id: state.runId,
+        name: state.playerName || "Игрок",
+        score: state.score,
+        rounds: state.rounds,
+        bestStreak: state.bestStreak,
+        date: new Date().toISOString()
+      };
+
+      if (existingIndex >= 0) {
+        records[existingIndex] = record;
+      } else {
+        records.push(record);
+      }
+
+      records.sort((a, b) => b.score - a.score);
+      saveRecords(records.slice(0, 10));
+    }
+
+    function resetProgress() {
+      const name = state.playerName;
+      state = defaultState();
+      state.playerName = name || "Игрок";
+      saveState();
+      renderStats();
+      renderRecords();
+      pickObject();
+      showToast("Прогресс сброшен");
+    }
+
+    function showToast(text) {
+      els.toast.textContent = text;
+      els.toast.classList.add("show");
+
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => {
+        els.toast.classList.remove("show");
+      }, 2200);
+    }
+
+    function confetti() {
+      const canvas = els.confetti;
+      const ctx = canvas.getContext("2d");
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const colors = ["#8fd3ff", "#a78bfa", "#6ee7b7", "#fde68a", "#fb7185", "#ffffff"];
+      const particles = Array.from({ length: 170 }, () => ({
+        x: Math.random() * width,
+        y: -20 - Math.random() * height * .35,
+        size: 5 + Math.random() * 8,
+        speed: 2 + Math.random() * 5,
+        drift: -2 + Math.random() * 4,
+        rotation: Math.random() * Math.PI,
+        spin: -.12 + Math.random() * .24,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        shape: Math.random() > .5 ? "rect" : "circle"
+      }));
+
+      let frame = 0;
+      const maxFrames = 190;
+
+      function draw() {
+        frame++;
+        ctx.clearRect(0, 0, width, height);
+
+        for (const p of particles) {
+          p.y += p.speed;
+          p.x += p.drift + Math.sin((frame + p.y) * .02);
+          p.rotation += p.spin;
+
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rotation);
+          ctx.fillStyle = p.color;
+
+          if (p.shape === "rect") {
+            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * .62);
+          } else {
+            ctx.beginPath();
+            ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          ctx.restore();
+        }
+
+        if (frame < maxFrames) {
+          requestAnimationFrame(draw);
+        } else {
+          ctx.clearRect(0, 0, width, height);
+        }
+      }
+
+      draw();
+    }
+
+    els.photo.addEventListener("error", () => {
+      els.photo.style.display = "none";
+      els.fallback.classList.add("active");
+    });
+
+    els.photo.addEventListener("load", () => {
+      els.fallback.classList.remove("active");
+      els.photo.style.display = "block";
+    });
+
+    els.guessBtn.addEventListener("click", handleGuess);
+
+    els.guessInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") handleGuess();
+    });
+
+    els.skipBtn.addEventListener("click", () => {
+      if (!answered && currentObject && !state.usedIds.includes(currentObject.id)) {
+        state.usedIds.push(currentObject.id);
+      }
+      pickObject();
+      showToast("Новый случайный объект");
+    });
+
+    els.playerName.addEventListener("input", () => {
+      state.playerName = els.playerName.value.trim() || "Игрок";
+      saveState();
+      if (state.score > 0) {
+        saveRunRecord();
+        renderRecords();
+      }
+    });
+
+    els.resetProgressBtn.addEventListener("click", resetProgress);
+
+    els.clearRecordsBtn.addEventListener("click", () => {
+      saveRecords([]);
+      renderRecords();
+      showToast("Рекорды очищены");
+    });
+
+    window.addEventListener("resize", () => {
+      const ctx = els.confetti.getContext("2d");
+      ctx.clearRect(0, 0, els.confetti.width, els.confetti.height);
+    });
+
+    renderStats();
+    renderRecords();
+    pickObject();
+  </script>
+</body>
+</html>
